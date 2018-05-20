@@ -1,11 +1,14 @@
 defmodule RealTimeWeb.Router do
   use RealTimeWeb, :router
 
-  pipeline :api do
-    plug :accepts, ["json"]
+  pipeline :browser do
+    plug(:accepts, ["html"])
+    plug(:put_secure_browser_headers)
   end
 
-  scope "/api", RealTimeWeb do
-    pipe_through :api
+  scope "/", RealTimeWeb do
+    pipe_through(:browser)
+
+    get("/*path", PageController, :index)
   end
 end

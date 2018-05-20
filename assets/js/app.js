@@ -10,6 +10,10 @@ import css from '../css/app.css'
 // Import dependencies
 //
 
+import Elm from '../src/Main.elm'
+
+let app = Elm.Main.fullscreen()
+
 // Import local files
 //
 // Local files can be imported directly using relative
