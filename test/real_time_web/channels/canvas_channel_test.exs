@@ -4,7 +4,7 @@ defmodule RealTimeWeb.CanvasChannelTest do
 
   test "join/3 returns existing canvas" do
     assert {:ok, payload, _} = subscribe_and_join(socket(), CanvasChannel, "canvas:masterpiece")
-    assert payload == %{"canvas" => %{}}
+    assert payload == %{"canvas" => []}
   end
 
   test "pixel with coordinates and colors broadcasts" do

@@ -3,11 +3,8 @@ defmodule RealTime.CanvasTest do
   alias RealTime.Canvas
 
   setup do
-    {:ok, canvas: Canvas.new()}
-  end
-
-  test "new/0 returns an empty canvas", %{canvas: canvas} do
-    assert %Canvas{} = canvas
+    {:ok, canvas} = Canvas.start_link([])
+    {:ok, canvas: canvas}
   end
 
   test "get/2 returns white by default", %{canvas: canvas} do
@@ -21,7 +18,7 @@ defmodule RealTime.CanvasTest do
   test "put/3 updates the color", %{canvas: canvas} do
     coordinate = {10, 10}
     color = {1, 2, 3}
-    canvas = Canvas.put(canvas, coordinate, color)
+    Canvas.put(canvas, coordinate, color)
 
     assert Canvas.get(canvas, coordinate) == color
   end
@@ -37,10 +34,9 @@ defmodule RealTime.CanvasTest do
   test "list/1 returns sparse map of colors", %{canvas: canvas} do
     data = %{{10, 10} => {1, 2, 3}, {20, 20} => {0, 0, 0}}
 
-    canvas =
-      Enum.reduce(data, canvas, fn {coordinate, color}, canvas ->
-        Canvas.put(canvas, coordinate, color)
-      end)
+    Enum.each(data, fn {coordinate, color} ->
+      Canvas.put(canvas, coordinate, color)
+    end)
 
     assert Canvas.list(canvas) == data
   end
