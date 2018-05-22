@@ -34,12 +34,7 @@ type alias Model =
 
 init : String -> ( Model, Cmd Msg )
 init topic =
-    ( Model topic initData ColorPicker.empty Color.black Nothing, Cmd.none )
-
-
-initData : Data
-initData =
-    Dict.empty
+    ( Model topic Dict.empty ColorPicker.empty Color.black Nothing, Cmd.none )
 
 
 
@@ -48,6 +43,7 @@ initData =
 
 type Msg
     = ColorPickerMsg ColorPicker.Msg
+    | JoinMsg Decode.Value
     | MouseClick Point
     | MouseLeave
     | MouseMove Point
@@ -68,6 +64,14 @@ update msg model =
             in
                 ( { model | colorPicker = subModel, color = color |> Maybe.withDefault model.color }, Cmd.none, Nothing )
 
+        JoinMsg value ->
+            case Decode.decodeValue canvasDecoder value of
+                Ok decodedPixels ->
+                    ( { model | data = List.foldl insertPixel model.data decodedPixels }, Cmd.none, Nothing )
+
+                Err _ ->
+                    ( model, Cmd.none, Nothing )
+
         MouseClick point ->
             ( model, pushPixel ( floor (point.x / 8), floor (point.y / 8) ) model, Nothing )
 
@@ -79,11 +83,16 @@ update msg model =
 
         PixelMsg value ->
             case Decode.decodeValue pixelDecoder value of
-                Ok { x, y, r, g, b } ->
-                    ( { model | data = Dict.insert ( x, y ) (Color.rgb r g b) model.data }, Cmd.none, Nothing )
+                Ok decodedPixel ->
+                    ( { model | data = insertPixel decodedPixel model.data }, Cmd.none, Nothing )
 
                 Err err ->
                     ( model, Cmd.none, Nothing )
+
+
+insertPixel : DecodedPixel -> Data -> Data
+insertPixel { x, y, r, g, b } data =
+    Dict.insert ( x, y ) (Color.rgb r g b) data
 
 
 pushPixel : ( Int, Int ) -> Model -> Cmd Msg
@@ -133,6 +142,11 @@ pixelDecoder =
         (Decode.field "color" (Decode.index 0 Decode.int))
         (Decode.field "color" (Decode.index 1 Decode.int))
         (Decode.field "color" (Decode.index 2 Decode.int))
+
+
+canvasDecoder : Decode.Decoder (List DecodedPixel)
+canvasDecoder =
+    Decode.field "canvas" (Decode.list pixelDecoder)
 
 
 
@@ -194,6 +208,7 @@ subscriptions model =
     let
         channel =
             Channel.init (topic model)
+                |> Channel.onJoin JoinMsg
                 |> Channel.on "pixel" PixelMsg
     in
         Phoenix.connect socket [ channel ]
