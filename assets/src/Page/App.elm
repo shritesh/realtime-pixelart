@@ -1,6 +1,9 @@
 module Page.App exposing (..)
 
-import Canvas
+import Canvas exposing (Size, Style(Color), DrawOp(..))
+import Dict exposing (Dict)
+import Color exposing (Color)
+import ElementRelativeMouseEvents as MouseEvents exposing (Point)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Phoenix
@@ -11,14 +14,24 @@ import Phoenix.Socket as Socket
 -- MODEL
 
 
+type alias Data =
+    Dict ( Int, Int ) Color
+
+
 type alias Model =
     { topic : String
+    , data : Data
     }
 
 
 init : String -> ( Model, Cmd Msg )
 init topic =
-    ( Model topic, Cmd.none )
+    ( Model topic initData, Cmd.none )
+
+
+initData : Data
+initData =
+    Dict.empty
 
 
 
@@ -26,7 +39,7 @@ init topic =
 
 
 type Msg
-    = None
+    = MouseClick Point
 
 
 type alias ExtMsg =
@@ -36,8 +49,8 @@ type alias ExtMsg =
 update : Msg -> Model -> ( Model, Cmd Msg, Maybe ExtMsg )
 update msg model =
     case msg of
-        None ->
-            ( model, Cmd.none, Nothing )
+        MouseClick point ->
+            ( { model | data = Dict.insert ( floor (point.x / 8), floor (point.y / 8) ) Color.black model.data }, Cmd.none, Nothing )
 
 
 
@@ -46,8 +59,23 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Canvas.initialize (Canvas.Size 800 600)
-        |> Canvas.toHtml [ class "ba db mt5 center" ]
+    Canvas.initialize (Size 800 600)
+        |> Canvas.draw (drawing model.data)
+        |> Canvas.toHtml [ class "ba db mt5 center", MouseEvents.onClick MouseClick ]
+
+
+drawing : Data -> DrawOp
+drawing data =
+    let
+        process : ( Int, Int ) -> Color -> List DrawOp -> List DrawOp
+        process ( x, y ) color list =
+            List.append list
+                [ FillStyle (Color color)
+                , FillRect (Point (toFloat x * 8) (toFloat y * 8)) (Size 8 8)
+                ]
+    in
+        Dict.foldl process [] data
+            |> Canvas.batch
 
 
 
