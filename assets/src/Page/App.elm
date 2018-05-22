@@ -8,8 +8,11 @@ import ElementRelativeMouseEvents as MouseEvents exposing (Point)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onMouseLeave)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Phoenix
 import Phoenix.Channel as Channel
+import Phoenix.Push as Push
 import Phoenix.Socket as Socket
 
 
@@ -46,8 +49,9 @@ initData =
 type Msg
     = ColorPickerMsg ColorPicker.Msg
     | MouseClick Point
-    | MouseMove Point
     | MouseLeave
+    | MouseMove Point
+    | PixelMsg Decode.Value
 
 
 type alias ExtMsg =
@@ -65,13 +69,70 @@ update msg model =
                 ( { model | colorPicker = subModel, color = color |> Maybe.withDefault model.color }, Cmd.none, Nothing )
 
         MouseClick point ->
-            ( { model | data = Dict.insert ( floor (point.x / 8), floor (point.y / 8) ) model.color model.data }, Cmd.none, Nothing )
+            ( model, pushPixel ( floor (point.x / 8), floor (point.y / 8) ) model, Nothing )
 
         MouseMove point ->
             ( { model | hoverPoint = Just ( floor (point.x / 8), floor (point.y / 8) ) }, Cmd.none, Nothing )
 
         MouseLeave ->
             ( { model | hoverPoint = Nothing }, Cmd.none, Nothing )
+
+        PixelMsg value ->
+            case Decode.decodeValue pixelDecoder value of
+                Ok { x, y, r, g, b } ->
+                    ( { model | data = Dict.insert ( x, y ) (Color.rgb r g b) model.data }, Cmd.none, Nothing )
+
+                Err err ->
+                    ( model, Cmd.none, Nothing )
+
+
+pushPixel : ( Int, Int ) -> Model -> Cmd Msg
+pushPixel ( x, y ) model =
+    let
+        rgb =
+            Color.toRgb model.color
+
+        payload =
+            Encode.object
+                [ ( "coordinate"
+                  , Encode.list
+                        [ Encode.int x
+                        , Encode.int y
+                        ]
+                  )
+                , ( "color"
+                  , Encode.list
+                        [ Encode.int rgb.red
+                        , Encode.int rgb.green
+                        , Encode.int rgb.blue
+                        ]
+                  )
+                ]
+
+        message =
+            Push.init (topic model) "pixel"
+                |> Push.withPayload payload
+    in
+        Phoenix.push "ws://localhost:4000/socket/websocket" message
+
+
+type alias DecodedPixel =
+    { x : Int
+    , y : Int
+    , r : Int
+    , g : Int
+    , b : Int
+    }
+
+
+pixelDecoder : Decode.Decoder DecodedPixel
+pixelDecoder =
+    Decode.map5 DecodedPixel
+        (Decode.field "coordinate" (Decode.index 0 Decode.int))
+        (Decode.field "coordinate" (Decode.index 1 Decode.int))
+        (Decode.field "color" (Decode.index 0 Decode.int))
+        (Decode.field "color" (Decode.index 1 Decode.int))
+        (Decode.field "color" (Decode.index 2 Decode.int))
 
 
 
@@ -87,7 +148,7 @@ view model =
             ]
         , Canvas.initialize (Size 800 600)
             |> Canvas.draw (drawing model)
-            |> Canvas.toHtml [ class "ba db mv3 center", MouseEvents.onClick MouseClick, MouseEvents.onMouseMove MouseMove, onMouseLeave MouseLeave, style [ ( "cursor", "none" ) ] ]
+            |> Canvas.toHtml [ class "ba db mt3 center", MouseEvents.onClick MouseClick, MouseEvents.onMouseMove MouseMove, onMouseLeave MouseLeave, style [ ( "cursor", "none" ) ] ]
         ]
 
 
@@ -133,5 +194,6 @@ subscriptions model =
     let
         channel =
             Channel.init (topic model)
+                |> Channel.on "pixel" PixelMsg
     in
         Phoenix.connect socket [ channel ]
