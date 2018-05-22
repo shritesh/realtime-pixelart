@@ -1,11 +1,13 @@
 module Page.App exposing (..)
 
 import Canvas exposing (Size, Style(Color), DrawOp(..))
-import Dict exposing (Dict)
 import Color exposing (Color)
+import ColorPicker
+import Dict exposing (Dict)
 import ElementRelativeMouseEvents as MouseEvents exposing (Point)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onMouseLeave)
 import Phoenix
 import Phoenix.Channel as Channel
 import Phoenix.Socket as Socket
@@ -21,12 +23,15 @@ type alias Data =
 type alias Model =
     { topic : String
     , data : Data
+    , colorPicker : ColorPicker.State
+    , color : Color
+    , hoverPoint : Maybe ( Int, Int )
     }
 
 
 init : String -> ( Model, Cmd Msg )
 init topic =
-    ( Model topic initData, Cmd.none )
+    ( Model topic initData ColorPicker.empty Color.black Nothing, Cmd.none )
 
 
 initData : Data
@@ -39,7 +44,10 @@ initData =
 
 
 type Msg
-    = MouseClick Point
+    = ColorPickerMsg ColorPicker.Msg
+    | MouseClick Point
+    | MouseMove Point
+    | MouseLeave
 
 
 type alias ExtMsg =
@@ -49,8 +57,21 @@ type alias ExtMsg =
 update : Msg -> Model -> ( Model, Cmd Msg, Maybe ExtMsg )
 update msg model =
     case msg of
+        ColorPickerMsg colorPickerMsg ->
+            let
+                ( subModel, color ) =
+                    ColorPicker.update colorPickerMsg model.color model.colorPicker
+            in
+                ( { model | colorPicker = subModel, color = color |> Maybe.withDefault model.color }, Cmd.none, Nothing )
+
         MouseClick point ->
-            ( { model | data = Dict.insert ( floor (point.x / 8), floor (point.y / 8) ) Color.black model.data }, Cmd.none, Nothing )
+            ( { model | data = Dict.insert ( floor (point.x / 8), floor (point.y / 8) ) model.color model.data }, Cmd.none, Nothing )
+
+        MouseMove point ->
+            ( { model | hoverPoint = Just ( floor (point.x / 8), floor (point.y / 8) ) }, Cmd.none, Nothing )
+
+        MouseLeave ->
+            ( { model | hoverPoint = Nothing }, Cmd.none, Nothing )
 
 
 
@@ -59,13 +80,19 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Canvas.initialize (Size 800 600)
-        |> Canvas.draw (drawing model.data)
-        |> Canvas.toHtml [ class "ba db mt5 center", MouseEvents.onClick MouseClick ]
+    main_ []
+        [ div [ class "tc mt3" ]
+            [ ColorPicker.view model.color model.colorPicker
+                |> Html.map ColorPickerMsg
+            ]
+        , Canvas.initialize (Size 800 600)
+            |> Canvas.draw (drawing model)
+            |> Canvas.toHtml [ class "ba db mv3 center", MouseEvents.onClick MouseClick, MouseEvents.onMouseMove MouseMove, onMouseLeave MouseLeave, style [ ( "cursor", "none" ) ] ]
+        ]
 
 
-drawing : Data -> DrawOp
-drawing data =
+drawing : Model -> DrawOp
+drawing model =
     let
         process : ( Int, Int ) -> Color -> List DrawOp -> List DrawOp
         process ( x, y ) color list =
@@ -73,8 +100,17 @@ drawing data =
                 [ FillStyle (Color color)
                 , FillRect (Point (toFloat x * 8) (toFloat y * 8)) (Size 8 8)
                 ]
+
+        hoverPixel list =
+            case model.hoverPoint of
+                Just ( x, y ) ->
+                    process ( x, y ) model.color list
+
+                Nothing ->
+                    list
     in
-        Dict.foldl process [] data
+        Dict.foldl process [] model.data
+            |> hoverPixel
             |> Canvas.batch
 
 
