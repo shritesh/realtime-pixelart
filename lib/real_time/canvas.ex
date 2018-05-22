@@ -1,8 +1,8 @@
 defmodule RealTime.Canvas do
   alias RealTime.Canvas
 
-  @gridsize_x 800
-  @gridsize_y 600
+  @gridsize_x 100
+  @gridsize_y 75
   @default_color {255, 255, 255}
 
   defstruct data: %{}
