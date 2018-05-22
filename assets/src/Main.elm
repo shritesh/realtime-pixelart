@@ -5,9 +5,9 @@ import Page.App as App
 import Page.Welcome as Welcome
 
 
-main : Program Never Model Msg
+main : Program String Model Msg
 main =
-    Html.program
+    Html.programWithFlags
         { init = init
         , view = view
         , update = update
@@ -25,17 +25,18 @@ type Page
 
 
 type alias Model =
-    { page : Page
+    { endpoint : String
+    , page : Page
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : String -> ( Model, Cmd Msg )
+init endpoint =
     let
         ( subModel, subCmd ) =
             Welcome.init
     in
-        ( Model (Welcome subModel), Cmd.map WelcomeMsg subCmd )
+        ( Model endpoint (Welcome subModel), Cmd.map WelcomeMsg subCmd )
 
 
 
@@ -68,9 +69,9 @@ update msg model =
                     Just (Welcome.Topic topic) ->
                         let
                             ( subModel, subCmd ) =
-                                App.init topic
+                                App.init model.endpoint topic
                         in
-                            ( Model (App subModel), Cmd.map AppMsg subCmd )
+                            ( { model | page = App subModel }, Cmd.map AppMsg subCmd )
 
                     Nothing ->
                         ( { model | page = Welcome subModel }, Cmd.map WelcomeMsg subCmd )

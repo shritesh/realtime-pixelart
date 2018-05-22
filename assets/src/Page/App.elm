@@ -24,7 +24,8 @@ type alias Data =
 
 
 type alias Model =
-    { topic : String
+    { endpoint : String
+    , topic : String
     , data : Data
     , colorPicker : ColorPicker.State
     , color : Color
@@ -32,9 +33,9 @@ type alias Model =
     }
 
 
-init : String -> ( Model, Cmd Msg )
-init topic =
-    ( Model topic Dict.empty ColorPicker.empty Color.black Nothing, Cmd.none )
+init : String -> String -> ( Model, Cmd Msg )
+init endpoint topic =
+    ( Model endpoint topic Dict.empty ColorPicker.empty Color.black Nothing, Cmd.none )
 
 
 
@@ -122,7 +123,7 @@ pushPixel ( x, y ) model =
             Push.init (topic model) "pixel"
                 |> Push.withPayload payload
     in
-        Phoenix.push "ws://localhost:4000/socket/websocket" message
+        Phoenix.push model.endpoint message
 
 
 type alias DecodedPixel =
@@ -193,9 +194,9 @@ drawing model =
 -- SUBSCRIPTIONS
 
 
-socket : Socket.Socket Msg
-socket =
-    Socket.init "ws://localhost:4000/socket/websocket"
+socket : Model -> Socket.Socket Msg
+socket model =
+    Socket.init model.endpoint
 
 
 topic : Model -> String
@@ -211,4 +212,4 @@ subscriptions model =
                 |> Channel.onJoin JoinMsg
                 |> Channel.on "pixel" PixelMsg
     in
-        Phoenix.connect socket [ channel ]
+        Phoenix.connect (socket model) [ channel ]
