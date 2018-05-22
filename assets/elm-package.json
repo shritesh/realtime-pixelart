@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
-    "summary": "A \"real time\" chat application using Elixir, Phoenix and Elm ",
-    "repository": "https://github.com/shritesh/nashfp-realtime.git",
+    "summary": "A real time pixel art editor using Elixir, Phoenix and Elm",
+    "repository": "https://github.com/shritesh/realtime-pixelart.git",
     "license": "MIT",
     "source-directories": [
         "src"
