@@ -9,6 +9,6 @@ defmodule RealTimeWeb.Router do
   scope "/", RealTimeWeb do
     pipe_through(:browser)
 
-    get("/", PageController, :index)
+    get("/*path", PageController, :index)
   end
 end

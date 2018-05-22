@@ -3,6 +3,7 @@ module Page.Welcome exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Navigation
 
 
 -- MODEL
@@ -27,21 +28,17 @@ type Msg
     | ChangeTopic String
 
 
-type ExtMsg
-    = Topic String
-
-
-update : Msg -> Model -> ( Model, Cmd Msg, Maybe ExtMsg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickJoin ->
             if not (String.isEmpty model.topic) then
-                ( model, Cmd.none, Just (Topic model.topic) )
+                ( model, Navigation.newUrl ("/" ++ model.topic) )
             else
-                ( model, Cmd.none, Nothing )
+                ( model, Cmd.none )
 
         ChangeTopic topic ->
-            ( { model | topic = topic }, Cmd.none, Nothing )
+            ( { model | topic = topic }, Cmd.none )
 
 
 

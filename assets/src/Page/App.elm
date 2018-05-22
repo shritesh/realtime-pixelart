@@ -10,6 +10,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onMouseLeave)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Navigation exposing (Location)
 import Phoenix
 import Phoenix.Channel as Channel
 import Phoenix.Push as Push
@@ -24,8 +25,7 @@ type alias Data =
 
 
 type alias Model =
-    { endpoint : String
-    , topic : String
+    { location : Location
     , data : Data
     , colorPicker : ColorPicker.State
     , color : Color
@@ -33,9 +33,9 @@ type alias Model =
     }
 
 
-init : String -> String -> ( Model, Cmd Msg )
-init endpoint topic =
-    ( Model endpoint topic Dict.empty ColorPicker.empty Color.black Nothing, Cmd.none )
+init : Location -> ( Model, Cmd Msg )
+init location =
+    ( Model location Dict.empty ColorPicker.empty Color.black Nothing, Cmd.none )
 
 
 
@@ -51,11 +51,7 @@ type Msg
     | PixelMsg Decode.Value
 
 
-type alias ExtMsg =
-    ()
-
-
-update : Msg -> Model -> ( Model, Cmd Msg, Maybe ExtMsg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ColorPickerMsg colorPickerMsg ->
@@ -63,32 +59,32 @@ update msg model =
                 ( subModel, color ) =
                     ColorPicker.update colorPickerMsg model.color model.colorPicker
             in
-                ( { model | colorPicker = subModel, color = color |> Maybe.withDefault model.color }, Cmd.none, Nothing )
+                ( { model | colorPicker = subModel, color = color |> Maybe.withDefault model.color }, Cmd.none )
 
         JoinMsg value ->
             case Decode.decodeValue canvasDecoder value of
                 Ok decodedPixels ->
-                    ( { model | data = List.foldl insertPixel model.data decodedPixels }, Cmd.none, Nothing )
+                    ( { model | data = List.foldl insertPixel model.data decodedPixels }, Cmd.none )
 
                 Err _ ->
-                    ( model, Cmd.none, Nothing )
+                    ( model, Cmd.none )
 
         MouseClick point ->
-            ( model, pushPixel ( floor (point.x / 8), floor (point.y / 8) ) model, Nothing )
+            ( model, pushPixel ( floor (point.x / 8), floor (point.y / 8) ) model )
 
         MouseMove point ->
-            ( { model | hoverPoint = Just ( floor (point.x / 8), floor (point.y / 8) ) }, Cmd.none, Nothing )
+            ( { model | hoverPoint = Just ( floor (point.x / 8), floor (point.y / 8) ) }, Cmd.none )
 
         MouseLeave ->
-            ( { model | hoverPoint = Nothing }, Cmd.none, Nothing )
+            ( { model | hoverPoint = Nothing }, Cmd.none )
 
         PixelMsg value ->
             case Decode.decodeValue pixelDecoder value of
                 Ok decodedPixel ->
-                    ( { model | data = insertPixel decodedPixel model.data }, Cmd.none, Nothing )
+                    ( { model | data = insertPixel decodedPixel model.data }, Cmd.none )
 
                 Err err ->
-                    ( model, Cmd.none, Nothing )
+                    ( model, Cmd.none )
 
 
 insertPixel : DecodedPixel -> Data -> Data
@@ -123,7 +119,7 @@ pushPixel ( x, y ) model =
             Push.init (topic model) "pixel"
                 |> Push.withPayload payload
     in
-        Phoenix.push model.endpoint message
+        Phoenix.push (endpoint model) message
 
 
 type alias DecodedPixel =
@@ -194,14 +190,28 @@ drawing model =
 -- SUBSCRIPTIONS
 
 
+endpoint : Model -> String
+endpoint model =
+    let
+        protocol =
+            case model.location.protocol of
+                "https:" ->
+                    "wss://"
+
+                _ ->
+                    "ws://"
+    in
+        protocol ++ model.location.host ++ "/socket/websocket"
+
+
 socket : Model -> Socket.Socket Msg
 socket model =
-    Socket.init model.endpoint
+    Socket.init (endpoint model)
 
 
 topic : Model -> String
 topic model =
-    "canvas:" ++ model.topic
+    "canvas:" ++ (String.dropLeft 1 model.location.pathname)
 
 
 subscriptions : Model -> Sub Msg

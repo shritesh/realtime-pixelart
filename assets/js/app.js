@@ -12,11 +12,7 @@ import css from '../css/app.css'
 
 import Elm from '../src/Main.elm'
 
-let endpoint =
-  (document.location.protocol === 'https:' ? 'wss://' : 'ws://') +
-  document.location.host +
-  '/socket/websocket'
-let app = Elm.Main.fullscreen(endpoint)
+let app = Elm.Main.fullscreen()
 
 // Import local files
 //
