@@ -15,7 +15,7 @@
     },
     "dependency-sources": {
         "elm-canvas/elm-canvas": {
-            "url": "git@github.com:elm-canvas/elm-canvas",
+            "url": "https://github.com/Elm-Canvas/elm-canvas.git",
             "ref": "master"
         }
     },
