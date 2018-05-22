@@ -8,8 +8,8 @@ defmodule RealTime.Canvas do
   defguard is_valid_color(r, g, b)
            when r >= 0 and r < 256 and g >= 0 and g < 256 and b >= 0 and b <= 256
 
-  def start_link(_opts) do
-    Agent.start(fn -> %{} end)
+  def start_link(opts \\ []) do
+    Agent.start(fn -> %{} end, opts)
   end
 
   def get(canvas, {x, y}) when is_in_bounds(x, y) do
