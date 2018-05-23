@@ -2,6 +2,8 @@
 
 A real time pixel art editor using Elixir, Phoenix and Elm
 
+![A masterpiece by NashFP](nashfp.png)
+
 To start your Phoenix server:
 
   * Install dependencies with `mix deps.get`
