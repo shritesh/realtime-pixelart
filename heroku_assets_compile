@@ -1,4 +1,4 @@
-yarn run deploy
+npm run deploy
 
 cd $phoenix_dir
 

@@ -70,10 +70,10 @@ update msg model =
                     ( model, Cmd.none )
 
         MouseClick point ->
-            ( model, pushPixel ( floor (point.x / 8), floor (point.y / 8) ) model )
+            ( model, pushPixel ( coordinate point ) model )
 
         MouseMove point ->
-            ( { model | hoverPoint = Just ( floor (point.x / 8), floor (point.y / 8) ) }, Cmd.none )
+            ( { model | hoverPoint = Just ( coordinate point ) }, Cmd.none )
 
         MouseLeave ->
             ( { model | hoverPoint = Nothing }, Cmd.none )
@@ -85,6 +85,13 @@ update msg model =
 
                 Err err ->
                     ( model, Cmd.none )
+
+pixelSize : Float
+pixelSize = 8
+
+coordinate : Point -> (Int, Int)
+coordinate point = 
+    ( floor (point.x / pixelSize), floor (point.y / pixelSize) )
 
 
 insertPixel : DecodedPixel -> Data -> Data
@@ -170,7 +177,7 @@ drawing model =
         process ( x, y ) color list =
             List.append list
                 [ FillStyle (Color color)
-                , FillRect (Point (toFloat x * 8) (toFloat y * 8)) (Size 8 8)
+                , FillRect (Point (toFloat x * pixelSize) (toFloat y * pixelSize)) (Size (floor pixelSize) (floor pixelSize))
                 ]
 
         hoverPixel list =

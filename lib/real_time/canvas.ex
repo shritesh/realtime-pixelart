@@ -3,15 +3,29 @@ defmodule RealTime.Canvas do
   @gridsize_y 75
   @default_color {255, 255, 255}
 
+  @moduledoc """
+  A `Canvas` is a process holding a grid of #{@gridsize_x} by #{@gridsize_y} pixels with individual colors.
+  The color format is {r,g,b} with values between 0 and 255.
+
+  The default color is #{inspect @default_color}.
+  """
+
   defguard is_in_bounds(x, y) when x >= 0 and x < @gridsize_x and y >= 0 and y < @gridsize_y
 
   defguard is_valid_color(r, g, b)
-           when r >= 0 and r < 256 and g >= 0 and g < 256 and b >= 0 and b <= 256
+           when r >= 0 and r < 256 and g >= 0 and g < 256 and b >= 0 and b < 256
 
+  @doc """
+  Starts the `Canvas` process.
+  """
   def start_link(opts \\ []) do
     Agent.start(fn -> %{} end, opts)
   end
 
+  @doc """
+  Returns the color of the pixel of the given index.
+  The index must be in bounds.
+  """
   def get(canvas, {x, y}) when is_in_bounds(x, y) do
     case Agent.get(canvas, &Map.get(&1, {x, y})) do
       nil -> @default_color
@@ -19,9 +33,17 @@ defmodule RealTime.Canvas do
     end
   end
 
+  @doc """
+  Puts the given color at the given pixel index.
+  The index must be in bounds.
+  """
   def put(canvas, {x, y} = coordinates, {r, g, b} = color)
       when is_in_bounds(x, y) and is_valid_color(r, g, b),
       do: Agent.update(canvas, &Map.put(&1, coordinates, color))
 
+
+  @doc """
+  Returns the map of non-default pixels with {r,g,b} color values keyed by {x,y} indices.
+  """
   def list(canvas), do: Agent.get(canvas, & &1)
 end

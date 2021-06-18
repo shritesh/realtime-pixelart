@@ -10,6 +10,8 @@ defmodule RealTime.Application do
     children = [
       # Start the endpoint when the application starts
       supervisor(RealTimeWeb.Endpoint, []),
+
+      # Start the registry to hold unique named `Canvas`es
       {Registry, keys: :unique, name: RealTime.CanvasRegistry}
       # Start your own worker by calling: RealTime.Worker.start_link(arg1, arg2, arg3)
       # worker(RealTime.Worker, [arg1, arg2, arg3]),
