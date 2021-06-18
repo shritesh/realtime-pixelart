@@ -10,9 +10,9 @@ defmodule RealTime.Canvas do
   The default color is #{inspect @default_color}.
   """
 
-  defguard is_in_bounds(x, y) when x >= 0 and x < @gridsize_x and y >= 0 and y < @gridsize_y
+  defguard in_bounds?(x, y) when x >= 0 and x < @gridsize_x and y >= 0 and y < @gridsize_y
 
-  defguard is_valid_color(r, g, b)
+  defguard valid_color?(r, g, b)
            when r >= 0 and r < 256 and g >= 0 and g < 256 and b >= 0 and b < 256
 
   @doc """
@@ -26,7 +26,7 @@ defmodule RealTime.Canvas do
   Returns the color of the pixel of the given index.
   The index must be in bounds.
   """
-  def get(canvas, {x, y}) when is_in_bounds(x, y) do
+  def get(canvas, {x, y}) when in_bounds?(x, y) do
     case Agent.get(canvas, &Map.get(&1, {x, y})) do
       nil -> @default_color
       color -> color
@@ -38,7 +38,7 @@ defmodule RealTime.Canvas do
   The index must be in bounds.
   """
   def put(canvas, {x, y} = coordinates, {r, g, b} = color)
-      when is_in_bounds(x, y) and is_valid_color(r, g, b),
+      when in_bounds?(x, y) and valid_color?(r, g, b),
       do: Agent.update(canvas, &Map.put(&1, coordinates, color))
 
 
